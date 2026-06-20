@@ -1,0 +1,8 @@
+Parser failed at line: X,2000,B,100,50
+Parser failed at line: A 2001 B 100 50
+Parser failed at line: A,,B,100,50
+Parser failed at line: A,abc,B,100,50
+Parser failed at line: A,2002,X,100,50
+Parser failed at line: C,2002,B,100
+Parser failed at line: A,2003,B,100,
+Parser failed at line: A,2004,B,100
