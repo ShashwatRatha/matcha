@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "constants.hpp"
 #include "levels.hpp"
 #include "memManage.hpp"
 

@@ -86,9 +86,10 @@ bool PriceLadder::removeOrder(uint32_t ndx, MemManager& mem) {
   // best price updation
   if (bestLevel().isEmpty()) {
     if (mType == Side::ASK) {
-      int saved = mBestPrice;
+      int32_t saved = mBestPrice;
       mBestPrice = INVALID_IDX;
-      for (auto p = saved - mBasePrice + HALF_WIDTH; p <= 2 * HALF_WIDTH; p++)
+      for (int32_t p = saved - mBasePrice + HALF_WIDTH; p <= 2 * HALF_WIDTH;
+           p++)
         if (!mLadder[p].isEmpty()) {
           mBestPrice = p + mBasePrice - HALF_WIDTH;
           break;
@@ -96,9 +97,9 @@ bool PriceLadder::removeOrder(uint32_t ndx, MemManager& mem) {
     }
 
     if (mType == Side::BUY) {
-      int saved = mBestPrice;
+      int32_t saved = mBestPrice;
       mBestPrice = INVALID_IDX;
-      for (auto p = saved - mBasePrice + HALF_WIDTH; p >= 0; p--)
+      for (int32_t p = saved - mBasePrice + HALF_WIDTH; p >= 0; p--)
         if (!mLadder[p].isEmpty()) {
           mBestPrice = p + mBasePrice - HALF_WIDTH;
           break;

@@ -22,7 +22,7 @@ Order* MemManager::getOrder(const uint32_t& ndx) const {
 uint32_t MemManager::allocateOrder() {
   if (mFreeIdx >= 0) return mFreeList[mFreeIdx--];
   if (mFront + 1 < mCapacity) return ++mFront;
-  return -1;
+  return INVALID_IDX;
 }
 
 void MemManager::freeOrder(const uint32_t& ndx) {

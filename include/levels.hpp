@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-const uint32_t INVALID_IDX = 0xffffffff;
+#include "constants.hpp"
 
 struct PriceLevel {
   uint32_t price = 0;
