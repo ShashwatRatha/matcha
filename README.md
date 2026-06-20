@@ -21,7 +21,7 @@ To bypass the pointer-chasing and rebalancing overheads of tree structures (like
 
 * **Direct-Offset Mapping:** Price levels map directly to slots inside a contiguous array. Resolving a price level reduces to simple pointer arithmetic:
 
-$$\text{Index} = \text{Target Price} - \text{Base Price} + \text{HALF\_WIDTH}$$
+$$\text{Index} = \text{Target Price} - \text{Base Price} + \text{HALF\-WIDTH}$$
 
 
 * **Doubly-Linked FIFO Queues:** Each active `PriceLevel` maintains indices pointing to its `oldestOrderID` and `newestOrderID`. Orders at the same price tier form an intrusive doubly-linked list woven directly inside the memory arena, guaranteeing true time-priority execution loops without auxiliary container costs.
