@@ -15,7 +15,6 @@ struct BufReader {
   const uint8_t* end;
   const uint8_t* cursor;
 
-  bool has(uint32_t off) const;
   template <typename T>
   T readStruct();
 };

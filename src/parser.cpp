@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <exception>
 #include <iostream>
 
 BufReader::BufReader(const uint8_t *data, uint32_t len)
@@ -28,12 +29,6 @@ ITCHMsg getMsg(BufReader &buf) {
       break;
     case 'F':
       msg = buf.readStruct<ITCHStructs::AddOrderMPID>();
-      break;
-    case 'E':
-      msg = buf.readStruct<ITCHStructs::OrderExecutedMsg>();
-      break;
-    case 'C':
-      msg = buf.readStruct<ITCHStructs::OrderExecutedPriceMsg>();
       break;
     case 'D':
       msg = buf.readStruct<ITCHStructs::OrderDltMsg>();
@@ -58,8 +53,8 @@ UDPHdr readUDPHdr(BufReader &buf) {
   UDPHdr hdr;
   std::memcpy(&hdr, buf.cursor, 20);
   buf.cursor += 20;
-  hdr.sessCnt = __builtin_bswap64(hdr.sessCnt);
-  hdr.msgCnt = __builtin_bswap16(hdr.msgCnt);
+  hdr.sessCnt = bs64(hdr.sessCnt);
+  hdr.msgCnt = bs16(hdr.msgCnt);
   return hdr;
 }
 
@@ -85,7 +80,11 @@ void handleMsgs(const char *path, OrderBook &book) {
   BufReader reader(data, buf.st_size);
   auto header = readUDPHdr(reader);
 
-  while (header.msgCnt--) book.consumeMsg(getMsg(reader));
+  while (header.msgCnt--) try {
+      book.consumeMsg(getMsg(reader));
+    } catch (const std::exception &e) {
+      std::cerr << e.what() << "\n";
+    }
 
   munmap((void *)data, buf.st_size);
 }

@@ -3,6 +3,11 @@
 #include <cstdint>
 #include <variant>
 
+// inline swap helpers
+constexpr auto bs16 = [](uint16_t s) { return __builtin_bswap16(s); };
+constexpr auto bs32 = [](uint32_t s) { return __builtin_bswap32(s); };
+constexpr auto bs64 = [](uint64_t s) { return __builtin_bswap64(s); };
+
 namespace ITCHStructs {
 struct AddOrder {
   uint8_t msgType = 'A';
@@ -37,28 +42,6 @@ struct SystemMsg {
   uint8_t eventCode;
 } __attribute__((packed));
 
-struct OrderExecutedMsg {
-  uint8_t msgType = 'E';
-  uint16_t stockLocate;
-  uint16_t trackNum;
-  uint8_t timestamp[6];
-  uint64_t orderRefNum;
-  uint32_t execShares;
-  uint64_t matchNum;
-} __attribute__((packed));
-
-struct OrderExecutedPriceMsg {
-  uint8_t msgType = 'C';
-  uint16_t stockLocate;
-  uint16_t trackNum;
-  uint8_t timestamp[6];
-  uint64_t orderRefNum;
-  uint32_t execShares;
-  uint64_t matchNum;
-  uint8_t printable;
-  uint32_t execPrice;
-} __attribute__((packed));
-
 struct OrderCancelMsg {
   uint8_t msgType = 'X';
   uint16_t stockLocate;
@@ -90,8 +73,8 @@ struct OrderReplaceMsg {
 struct NullTp {};
 };  // namespace ITCHStructs
 
-using ITCHMsg = std::variant<
-    ITCHStructs::AddOrder, ITCHStructs::AddOrderMPID,
-    ITCHStructs::OrderExecutedMsg, ITCHStructs::OrderExecutedPriceMsg,
-    ITCHStructs::OrderCancelMsg, ITCHStructs::OrderDltMsg,
-    ITCHStructs::OrderReplaceMsg, ITCHStructs::SystemMsg, ITCHStructs::NullTp>;
+using ITCHMsg =
+    std::variant<ITCHStructs::AddOrder, ITCHStructs::AddOrderMPID,
+                 ITCHStructs::OrderCancelMsg, ITCHStructs::OrderDltMsg,
+                 ITCHStructs::OrderReplaceMsg, ITCHStructs::SystemMsg,
+                 ITCHStructs::NullTp>;

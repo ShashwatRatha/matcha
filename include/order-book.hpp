@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <unordered_map>
-#include <vector>
 
 #include "itch-structs.hpp"
 #include "ladder.hpp"
@@ -12,23 +11,35 @@
 struct TradeEvent {
   uint32_t matchPrice;
   uint32_t matchQty;
-  uint32_t bidOrderID;
-  uint32_t askOrderID;
+  uint64_t bidOrderID;
+  uint64_t askOrderID;
 };
 
 class OrderBook {
  private:
+  // @members
   MemManager mMem;
-  PriceLadder mAsks;
+  PriceLadder mSells;
   PriceLadder mBuys;
-  std::unordered_map<uint32_t, uint32_t> mIDtoOffsets;
-  // bool addOrder(const Parser::ParsedOutput&);
-  // bool replaceOrder(const Parser::ParsedOutput&);
-  bool cancelOrder(uint32_t id);
-  void match(std::vector<TradeEvent>& out, Order& incoming);
+  std::unordered_map<uint64_t, uint32_t> mIDtoOffsets;
+
+  // @handlers
+  void handleAdd(const ITCHStructs::AddOrder& msg);
+  void handleAdd(const ITCHStructs::AddOrderMPID& msg);
+  void handleSystem(const ITCHStructs::SystemMsg& msg);
+  void handleCancel(const ITCHStructs::OrderCancelMsg& msg);
+  void handleReplace(const ITCHStructs::OrderReplaceMsg& msg);
+  void handleDlt(const ITCHStructs::OrderDltMsg& msg);
+
+  // @internals
+  void match(Order& incoming);
 
  public:
-  OrderBook(uint32_t base);
+  explicit OrderBook(uint32_t base);
+  OrderBook(OrderBook&&) = delete;
+  OrderBook(const OrderBook&) = delete;
+  OrderBook& operator=(OrderBook&&) = delete;
+  OrderBook& operator=(const OrderBook&) = delete;
 
-  bool consumeMsg(const ITCHMsg&);
+  void consumeMsg(const ITCHMsg&);
 };

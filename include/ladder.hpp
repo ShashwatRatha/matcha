@@ -2,13 +2,12 @@
 
 #include <cstdint>
 
-#include "constants.hpp"
 #include "levels.hpp"
 #include "memManage.hpp"
 
 inline constexpr int32_t HALF_WIDTH = 10000;
 
-enum class Side { BUY, ASK, NONE };
+enum class Side { BUY, SELL, NONE };
 
 class PriceLadder {
  private:
