@@ -4,7 +4,9 @@
 #include <cstdlib>
 #include <stdexcept>
 
-MemManager::MemManager() : mCapacity(1024), mFreeIdx(-1), mFront(-1) {
+#include "constants.hpp"
+
+MemManager::MemManager() : mCapacity(ARENA_SLOTS), mFreeIdx(-1), mFront(-1) {
   mArena = new Order[mCapacity];
   mFreeList = new uint32_t[mCapacity];
 }

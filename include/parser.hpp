@@ -1,16 +1,31 @@
 #pragma once
 
 #include <cstdint>
-#include <string_view>
 
-namespace Parser {
-struct ParsedOutput {
-  char action;
-  char side;
-  uint32_t orderID;
-  uint32_t orderPrice = -1;
-  uint32_t orderQty = -1;
+#include "itch-structs.hpp"
+#include "order-book.hpp"
+
+struct BufReader {
+  BufReader(const uint8_t* data, uint32_t len);
+  BufReader(const BufReader&) = delete;
+  BufReader(BufReader&&) = delete;
+  BufReader& operator=(const BufReader&) = delete;
+  BufReader& operator=(BufReader&&) = delete;
+
+  const uint8_t* end;
+  const uint8_t* cursor;
+
+  bool has(uint32_t off) const;
+  template <typename T>
+  T readStruct();
+};
+
+struct UDPHdr {
+  char sessName[10];
+  uint64_t sessCnt;
+  uint16_t msgCnt;
 } __attribute__((packed));
 
-bool parse(std::string_view line, ParsedOutput& output);
-};  // namespace Parser
+UDPHdr readUDPHdr(BufReader& buf);
+ITCHMsg getMsg(BufReader& buf);
+void handleMsgs(const char* path, OrderBook& book);

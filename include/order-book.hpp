@@ -4,11 +4,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "constants.hpp"
+#include "itch-structs.hpp"
 #include "ladder.hpp"
 #include "memManage.hpp"
 #include "orders.hpp"
-#include "parser.hpp"
 
 struct TradeEvent {
   uint32_t matchPrice;
@@ -23,13 +22,13 @@ class OrderBook {
   PriceLadder mAsks;
   PriceLadder mBuys;
   std::unordered_map<uint32_t, uint32_t> mIDtoOffsets;
-  bool addOrder(const Parser::ParsedOutput&);
-  bool replaceOrder(const Parser::ParsedOutput&);
+  // bool addOrder(const Parser::ParsedOutput&);
+  // bool replaceOrder(const Parser::ParsedOutput&);
   bool cancelOrder(uint32_t id);
   void match(std::vector<TradeEvent>& out, Order& incoming);
 
  public:
   OrderBook(uint32_t base);
 
-  bool consumeOrder(const Parser::ParsedOutput& p);
+  bool consumeMsg(const ITCHMsg&);
 };
