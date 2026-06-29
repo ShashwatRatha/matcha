@@ -2,10 +2,16 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <iostream>
 
 #include "constants.hpp"
 #include "levels.hpp"
 #include "memManage.hpp"
+
+static inline constexpr auto priceIdx = [](uint32_t p1, uint32_t p2) {
+  return ((int32_t(p1) - int32_t(p2)) / int32_t(TICK_SIZE) +
+          int32_t(HALF_WIDTH));
+};
 
 PriceLadder::PriceLadder(Side s, uint32_t base)
     : mType(s), mBasePrice(base), mBestPrice(INVALID_IDX) {
@@ -20,14 +26,18 @@ uint32_t PriceLadder::bestPrice() const { return mBestPrice; }
 bool PriceLadder::isEmpty() const { return mBestPrice == INVALID_IDX; }
 
 PriceLevel& PriceLadder::bestLevel() {
-  return mLadder[(mBestPrice - mBasePrice) / TICK_SIZE + HALF_WIDTH];
+  return mLadder[priceIdx(mBestPrice, mBasePrice)];
 }
 
 bool PriceLadder::emplaceOrder(uint32_t ndx, MemManager& mem) {
   auto order = mem.getOrder(ndx);
   if (!order) return false;
-  auto price = order->orderPrice;
-  auto slot = (price - mBasePrice) / TICK_SIZE + HALF_WIDTH;
+  int32_t price = order->orderPrice;
+  auto slot = priceIdx(price, mBasePrice);
+  if (slot < 0 || slot > 2 * HALF_WIDTH) {
+    std::cerr << "Price " << price << " does not fit in ladder.\n";
+    return false;
+  }
   auto& level = mLadder[slot];
 
   order->nextOrder = INVALID_IDX, order->prevOrder = INVALID_IDX;
@@ -59,8 +69,14 @@ bool PriceLadder::emplaceOrder(uint32_t ndx, MemManager& mem) {
 bool PriceLadder::removeOrder(uint32_t ndx, MemManager& mem) {
   auto order = mem.getOrder(ndx);
   if (!order) return false;
-  auto price = order->orderPrice;
-  auto slot = (price - mBasePrice) / TICK_SIZE + HALF_WIDTH;
+  int32_t price = order->orderPrice;
+  auto slot = priceIdx(price, mBasePrice);
+  if (slot < 0 || slot > 2 * HALF_WIDTH) {
+    std::cerr << "DEBUG slot=" << slot << " price=" << price
+              << " base=" << mBasePrice << "\n";
+    std::cerr << "Price " << price << " does not fit in ladder\n";
+    return false;
+  }
   auto& level = mLadder[slot];
   auto prevOrderID = order->prevOrder, nextOrderID = order->nextOrder;
 
@@ -89,7 +105,7 @@ bool PriceLadder::removeOrder(uint32_t ndx, MemManager& mem) {
   // best price updation
   if (!isEmpty() && bestLevel().isEmpty()) {
     if (mType == Side::SELL) {
-      int32_t saved = (mBestPrice - mBasePrice) / TICK_SIZE + HALF_WIDTH;
+      int32_t saved = priceIdx(mBestPrice, mBasePrice);
       mBestPrice = INVALID_IDX;
       for (int32_t p = saved; p <= 2 * HALF_WIDTH; p++)
         if (!mLadder[p].isEmpty()) {
@@ -99,7 +115,7 @@ bool PriceLadder::removeOrder(uint32_t ndx, MemManager& mem) {
     }
 
     if (mType == Side::BUY) {
-      int32_t saved = (mBestPrice - mBasePrice) / TICK_SIZE + HALF_WIDTH;
+      int32_t saved = priceIdx(mBestPrice, mBasePrice);
       mBestPrice = INVALID_IDX;
       for (int32_t p = saved; p >= 0; p--)
         if (!mLadder[p].isEmpty()) {

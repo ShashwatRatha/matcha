@@ -15,8 +15,8 @@ struct ParsedOutput {
   uint16_t trackNum;
   uint8_t timestamp[6];
   uint64_t orderRefNum;
-  uint64_t matchNumNewORN;
-  uint8_t bsPrintEvCd;
+  uint64_t newORN;
+  uint8_t bsEvCd;
   uint32_t shares;
   uint32_t price;
   uint8_t stock[8];

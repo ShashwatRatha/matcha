@@ -34,7 +34,7 @@ static void generateData(const Parser::ParsedOutput& p) {
     case 'A': {
       serialise<MsgStructs::AddOrderWithoutMPID>(p, [&](auto& msg) {
         msg.orderRefNum = p.orderRefNum;
-        msg.bsInd = p.bsPrintEvCd;
+        msg.bsInd = p.bsEvCd;
         msg.shares = p.shares;
         std::memcpy(msg.stock, p.stock, 8);
         msg.price = p.price;
@@ -43,7 +43,7 @@ static void generateData(const Parser::ParsedOutput& p) {
     case 'F': {
       serialise<MsgStructs::AddOrderWithMPID>(p, [&](auto& msg) {
         msg.orderRefNum = p.orderRefNum;
-        msg.bsInd = p.bsPrintEvCd;
+        msg.bsInd = p.bsEvCd;
         msg.shares = p.shares;
         std::memcpy(msg.stock, p.stock, 8);
         msg.price = p.price;
@@ -52,27 +52,11 @@ static void generateData(const Parser::ParsedOutput& p) {
     } break;
     case 'S': {
       serialise<MsgStructs::SystemMsg>(
-          p, [&](auto& msg) { msg.eventCode = p.bsPrintEvCd; });
+          p, [&](auto& msg) { msg.eventCode = p.bsEvCd; });
     } break;
     case 'D': {
       serialise<MsgStructs::OrderDltMsg>(
           p, [&](auto& msg) { msg.orderRefNum = p.orderRefNum; });
-    } break;
-    case 'E': {
-      serialise<MsgStructs::OrderExecutedMsg>(p, [&](auto& msg) {
-        msg.orderRefNum = p.orderRefNum;
-        msg.execShares = p.shares;
-        msg.matchNum = p.matchNumNewORN;
-      });
-    } break;
-    case 'C': {
-      serialise<MsgStructs::OrderExecutedWithPriceMsg>(p, [&](auto& msg) {
-        msg.orderRefNum = p.orderRefNum;
-        msg.execShares = p.shares;
-        msg.matchNum = p.matchNumNewORN;
-        msg.printable = p.bsPrintEvCd;
-        msg.execPrice = p.price;
-      });
     } break;
     case 'X': {
       serialise<MsgStructs::OrderCancelMsg>(p, [&](auto& msg) {
@@ -83,7 +67,7 @@ static void generateData(const Parser::ParsedOutput& p) {
     case 'U': {
       serialise<MsgStructs::OrderReplaceMsg>(p, [&](auto& msg) {
         msg.orgORN = p.orderRefNum;
-        msg.newORN = p.matchNumNewORN;
+        msg.newORN = p.newORN;
         msg.newShares = p.shares;
         msg.newPrice = p.price;
       });

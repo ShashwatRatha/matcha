@@ -7,7 +7,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <exception>
 #include <iostream>
 
 BufReader::BufReader(const uint8_t *data, uint32_t len)
@@ -22,8 +21,9 @@ T BufReader::readStruct() {
 }
 
 ITCHMsg getMsg(BufReader &buf) {
+  buf.cursor += 2;
   ITCHMsg msg = ITCHStructs::NullTp();
-  switch (*buf.cursor) {
+  switch (*(buf.cursor)) {
     case 'A':
       msg = buf.readStruct<ITCHStructs::AddOrder>();
       break;
@@ -80,11 +80,7 @@ void handleMsgs(const char *path, OrderBook &book) {
   BufReader reader(data, buf.st_size);
   auto header = readUDPHdr(reader);
 
-  while (header.msgCnt--) try {
-      book.consumeMsg(getMsg(reader));
-    } catch (const std::exception &e) {
-      std::cerr << e.what() << "\n";
-    }
+  while (header.msgCnt--) book.consumeMsg(getMsg(reader));
 
   munmap((void *)data, buf.st_size);
 }

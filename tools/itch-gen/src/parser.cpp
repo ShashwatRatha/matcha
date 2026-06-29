@@ -5,20 +5,20 @@
 #include <cstring>
 
 inline bool isValidMsgType(const char c) {
-  return (c == 'A' || c == 'S' || c == 'F' || c == 'E' || c == 'C' ||
-          c == 'X' || c == 'D' || c == 'U');
+  return (c == 'A' || c == 'S' || c == 'F' || c == 'X' ||
+      c == 'D' || c == 'U');
 }
 
-inline uint16_t be16(const uint16_t p) { return __builtin_bswap16(p); }
+inline uint16_t bs16(const uint16_t p) { return __builtin_bswap16(p); }
 
-inline uint32_t be32(const uint32_t p) { return __builtin_bswap32(p); }
+inline uint32_t bs32(const uint32_t p) { return __builtin_bswap32(p); }
 
-inline uint64_t be64(const uint64_t p) { return __builtin_bswap64(p); }
+inline uint64_t bs64(const uint64_t p) { return __builtin_bswap64(p); }
 
 // CSV Lines Format:
 // MsgType, StockLocate, TrackNum, Timestamp, OrderRefNum (curr or old (for
-// replace orders)), New OrderRefNum (only for replace)/matchNum (only for
-// Executed order), BuySell/printable/evntcde, Shares, price, stock, attr
+// replace orders)), New OrderRefNum (only for replace),
+// BuySell/evntcde, Shares, price, stock, attr
 
 bool Parser::parse(std::string_view line, ParsedOutput &output) {
   auto ptr = line.data(), end = line.data() + line.size();
@@ -38,7 +38,7 @@ bool Parser::parse(std::string_view line, ParsedOutput &output) {
     ptr++;
   }
   if (ptr == end) return false;
-  output.stockLocate = be16(stockLocate);
+  output.stockLocate = bs16(stockLocate);
   ptr++;
   if (ptr == end) return false;
 
@@ -50,7 +50,7 @@ bool Parser::parse(std::string_view line, ParsedOutput &output) {
     ptr++;
   }
   if (ptr == end) return false;
-  output.trackNum = be16(trackNum);
+  output.trackNum = bs16(trackNum);
   ptr++;
   if (ptr == end) return false;
 
@@ -79,30 +79,28 @@ bool Parser::parse(std::string_view line, ParsedOutput &output) {
   }
   if (t == 'S' && orn != 0) return false;
   if (ptr == end) return false;
-  output.orderRefNum = be64(orn);
+  output.orderRefNum = bs64(orn);
   ptr++;
   if (ptr == end) return false;
 
-  uint64_t matchNumNewORN = 0;
+  uint64_t newORN = 0;
   while (ptr < end && *ptr != ',') {
     if (!isdigit(*ptr)) return false;
-    if (matchNumNewORN > ((UINT64_MAX - (*ptr - '0')) / 10)) return false;
-    matchNumNewORN = matchNumNewORN * 10 + (*ptr - '0');
+    if (newORN > ((UINT64_MAX - (*ptr - '0')) / 10)) return false;
+    newORN = newORN * 10 + (*ptr - '0');
     ptr++;
   }
-  if ((t != 'E' && t != 'C' && t != 'U') && matchNumNewORN > 0) return false;
+  if ((t != 'U') && newORN > 0) return false;
   if (ptr == end) return false;
-  output.matchNumNewORN = be64(matchNumNewORN);
+  output.newORN = bs64(newORN);
   ptr++;
   if (ptr == end) return false;
 
-  char ch = output.bsPrintEvCd = (*ptr != ',') ? *ptr : 0;
+  char ch = output.bsEvCd = (*ptr != ',') ? *ptr : 0;
   ptr += (ch != 0);
 
   if (t == 'A' || t == 'F') {
     if (ch != 'B' && ch != 'S') return false;
-  } else if (t == 'C') {
-    if (ch != 'Y' && ch != 'N') return false;
   } else if (t == 'S') {
     if (ch != 'O' && ch != 'S' && ch != 'Q' && ch != 'M' && ch != 'E' && ch != 'C') return false;
   } else {
@@ -121,7 +119,7 @@ bool Parser::parse(std::string_view line, ParsedOutput &output) {
   }
   if ((t == 'S' || t == 'D') && shares > 0) return false;
   if (ptr == end) return false;
-  output.shares = be32(shares);
+  output.shares = bs32(shares);
   ptr++;
   if (ptr == end) return false;
 
@@ -132,9 +130,9 @@ bool Parser::parse(std::string_view line, ParsedOutput &output) {
     price = price * 10 + (*ptr - '0');
     ptr++;
   }
-  if ((t == 'S' || t == 'D' || t == 'E' || t == 'X') && price > 0) return false;
+  if ((t == 'S' || t == 'D' || t == 'X') && price > 0) return false;
   if (ptr == end) return false;
-  output.price = be32(price);
+  output.price = bs32(price);
   ptr++;
   if (ptr == end) return false;
 

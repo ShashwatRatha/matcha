@@ -131,7 +131,7 @@ void OrderBook::handleCancel(const ITCHStructs::OrderCancelMsg& msg) {
   if (order->orderShares <= shares) {
     if (order->orderShares < shares)
       std::cerr << "Order #" << orderRefNum << " does not have " << shares
-                << "shares. Zeroing out the shares and removing the order.\n";
+                << " shares. Zeroing out the shares and removing the order.\n";
     order->orderShares = 0;
     if (order->orderQueue == 'B')
       mBuys.removeOrder(arenaIdx, mMem);
