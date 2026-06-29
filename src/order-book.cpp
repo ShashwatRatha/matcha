@@ -101,18 +101,22 @@ void OrderBook::handleAdd(const ITCHStructs::AddOrder& msg) {
 
   match(*order);
   if (order->orderShares > 0) {
+    bool emplaced = false;
     if (order->orderQueue == 'B')
-      mBuys.emplaceOrder(arenaIdx, mMem);
+      emplaced = mBuys.emplaceOrder(arenaIdx, mMem);
     else if (order->orderQueue == 'S')
-      mSells.emplaceOrder(arenaIdx, mMem);
-    else {
+      emplaced = mSells.emplaceOrder(arenaIdx, mMem);
+    else
       std::cerr << "Invalid queue ID: " << order->orderQueue << "\n";
+
+    if (!emplaced) {
+      mMem.freeOrder(arenaIdx);
       return;
     }
     mIDtoOffsets[order->orderRefNum] = arenaIdx;
+  } else {
+    mMem.freeOrder(arenaIdx);
   }
-
-  if (order->orderShares <= 0) mMem.freeOrder(arenaIdx);
 }
 
 void OrderBook::handleCancel(const ITCHStructs::OrderCancelMsg& msg) {
@@ -133,13 +137,15 @@ void OrderBook::handleCancel(const ITCHStructs::OrderCancelMsg& msg) {
       std::cerr << "Order #" << orderRefNum << " does not have " << shares
                 << " shares. Zeroing out the shares and removing the order.\n";
     order->orderShares = 0;
-    if (order->orderQueue == 'B')
-      mBuys.removeOrder(arenaIdx, mMem);
-    else
-      mSells.removeOrder(arenaIdx, mMem);
-    mIDtoOffsets.erase(orderRefNum);
-    mMem.freeOrder(arenaIdx);
 
+    bool removed = (order->orderQueue == 'B')
+                       ? mBuys.removeOrder(arenaIdx, mMem)
+                       : mSells.removeOrder(arenaIdx, mMem);
+
+    if (removed) {
+      mIDtoOffsets.erase(orderRefNum);
+      mMem.freeOrder(arenaIdx);
+    }
     return;
   }
 
@@ -157,12 +163,13 @@ void OrderBook::handleDlt(const ITCHStructs::OrderDltMsg& msg) {
   auto arenaIdx = mIDtoOffsets[orderRefNum];
   auto queue = mMem.getOrder(arenaIdx)->orderQueue;
 
-  if (queue == 'S')
-    mSells.removeOrder(arenaIdx, mMem);
-  else
-    mBuys.removeOrder(arenaIdx, mMem);
-  mIDtoOffsets.erase(orderRefNum);
-  mMem.freeOrder(arenaIdx);
+  bool removed = (queue == 'B') ? mBuys.removeOrder(arenaIdx, mMem)
+                                : mSells.removeOrder(arenaIdx, mMem);
+
+  if (removed) {
+    mIDtoOffsets.erase(orderRefNum);
+    mMem.freeOrder(arenaIdx);
+  }
 }
 
 void OrderBook::handleReplace(const ITCHStructs::OrderReplaceMsg& msg) {
@@ -220,6 +227,7 @@ void OrderBook::match(Order& incoming) {
         auto headOrder = mMem.getOrder(headIdx);
         auto matchedQty = std::min(remainingQty, headOrder->orderShares);
         remainingQty -= matchedQty, headOrder->orderShares -= matchedQty;
+        level.totalShares -= matchedQty;
         TradeEvent event = {.matchPrice = headOrder->orderPrice,
                             .matchQty = matchedQty,
                             .bidOrderID = headOrder->orderRefNum,
@@ -227,8 +235,7 @@ void OrderBook::match(Order& incoming) {
         logTrade(event);
         if (headOrder->orderShares == 0) {
           mIDtoOffsets.erase(headOrder->orderRefNum);
-          mBuys.removeOrder(headIdx, mMem);
-          mMem.freeOrder(headIdx);
+          if (mBuys.removeOrder(headIdx, mMem)) mMem.freeOrder(headIdx);
         }
         if (remainingQty == 0) break;
       }
@@ -247,6 +254,7 @@ void OrderBook::match(Order& incoming) {
         auto headOrder = mMem.getOrder(headIdx);
         auto matchedQty = std::min(remainingQty, headOrder->orderShares);
         remainingQty -= matchedQty, headOrder->orderShares -= matchedQty;
+        level.totalShares -= matchedQty;
         TradeEvent event = {.matchPrice = headOrder->orderPrice,
                             .matchQty = matchedQty,
                             .bidOrderID = incoming.orderRefNum,
@@ -254,8 +262,7 @@ void OrderBook::match(Order& incoming) {
         logTrade(event);
         if (headOrder->orderShares == 0) {
           mIDtoOffsets.erase(headOrder->orderRefNum);
-          mSells.removeOrder(headIdx, mMem);
-          mMem.freeOrder(headIdx);
+          if (mSells.removeOrder(headIdx, mMem)) mMem.freeOrder(headIdx);
         }
         if (remainingQty == 0) break;
       }

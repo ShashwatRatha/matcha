@@ -43,6 +43,7 @@ ITCHMsg getMsg(BufReader &buf) {
       msg = buf.readStruct<ITCHStructs::SystemMsg>();
       break;
     default:
+      buf.cursor++;
       break;
   }
 
