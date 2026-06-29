@@ -1,63 +1,87 @@
 #include "parser.hpp"
 
-bool Parser::parse(std::string_view line, ParsedOutput &output) {
-  auto ptr = line.data(), end = line.data() + line.size();
-  if (ptr >= end || (*ptr != 'A' && *ptr != 'C' && *ptr != 'R')) return false;
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-  if (ptr + 2 >= end || *(ptr + 1) != ',') return false;
-  output.action = *ptr;
-  ptr += 2;
+#include <cstdint>
+#include <cstring>
+#include <iostream>
 
-  auto id = 0;
-  auto start = ptr;
-  while (ptr < end && *ptr != ',') {
-    if (__builtin_expect(*ptr >= '0' && *ptr <= '9', 1)) {
-      id = id * 10 + (*ptr - '0');
-      ptr++;
-    } else {
-      return false;
-    }
+BufReader::BufReader(const uint8_t *data, uint32_t len)
+    : cursor(data), end(data + len) {}
+
+template <typename T>
+T BufReader::readStruct() {
+  T msg;
+  std::memcpy(&msg, cursor, sizeof(T));
+  cursor += sizeof(T);
+  return msg;
+}
+
+ITCHMsg getMsg(BufReader &buf) {
+  buf.cursor += 2;
+  ITCHMsg msg = ITCHStructs::NullTp();
+  switch (*(buf.cursor)) {
+    case 'A':
+      msg = buf.readStruct<ITCHStructs::AddOrder>();
+      break;
+    case 'F':
+      msg = buf.readStruct<ITCHStructs::AddOrderMPID>();
+      break;
+    case 'D':
+      msg = buf.readStruct<ITCHStructs::OrderDltMsg>();
+      break;
+    case 'X':
+      msg = buf.readStruct<ITCHStructs::OrderCancelMsg>();
+      break;
+    case 'U':
+      msg = buf.readStruct<ITCHStructs::OrderReplaceMsg>();
+      break;
+    case 'S':
+      msg = buf.readStruct<ITCHStructs::SystemMsg>();
+      break;
+    default:
+      buf.cursor++;
+      break;
   }
-  if (ptr == start || ptr + 1 >= end || *ptr != ',') return false;
-  output.orderID = id;
-  ptr++;
 
-  if (*ptr != 'A' && *ptr != 'B') return false;
-  output.side = *ptr;
-  ptr++;
+  return msg;
+}
 
-  if (output.action == 'C') {
-    return ptr == end;
+UDPHdr readUDPHdr(BufReader &buf) {
+  UDPHdr hdr;
+  std::memcpy(&hdr, buf.cursor, 20);
+  buf.cursor += 20;
+  hdr.sessCnt = bs64(hdr.sessCnt);
+  hdr.msgCnt = bs16(hdr.msgCnt);
+  return hdr;
+}
+
+void handleMsgs(const char *path, OrderBook &book) {
+  auto fd = open(path, O_RDONLY);
+  if (fd < 0) {
+    std::cerr << "ERROR: Could not open input data file: " << path << "\n";
+    return;
   }
-  if (ptr + 1 >= end || *ptr != ',') return false;
-  ptr++;
 
-  auto price = 0;
-  start = ptr;
-  while (ptr < end && *ptr != ',') {
-    if (__builtin_expect(*ptr >= '0' && *ptr <= '9', 1)) {
-      price = price * 10 + (*ptr - '0');
-      ptr++;
-    } else {
-      return false;
-    }
+  struct stat buf;
+  fstat(fd, &buf);
+
+  auto data = static_cast<const uint8_t *>(
+      mmap(nullptr, buf.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
+  close(fd);
+
+  if (data == MAP_FAILED) {
+    std::cerr << "Failed to map input file\n";
+    return;
   }
-  if (ptr == start || ptr + 1 >= end || *ptr != ',') return false;
-  output.orderPrice = price;
-  ptr++;
 
-  auto qty = 0;
-  start = ptr;
-  while (ptr < end && *ptr != ',') {
-    if (__builtin_expect(*ptr >= '0' && *ptr <= '9', 1)) {
-      qty = qty * 10 + (*ptr - '0');
-      ptr++;
-    } else {
-      return false;
-    }
-  }
-  if (ptr == start) return false;
-  output.orderQty = qty;
+  BufReader reader(data, buf.st_size);
+  auto header = readUDPHdr(reader);
 
-  return ptr == end;
+  while (header.msgCnt--) book.consumeMsg(getMsg(reader));
+
+  munmap((void *)data, buf.st_size);
 }

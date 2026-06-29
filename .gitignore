@@ -2,6 +2,8 @@ bin/
 build/
 *.o
 *.out
+trade.log
+error.log
 .cache/
 further-work.txt
 compile_commands.json
