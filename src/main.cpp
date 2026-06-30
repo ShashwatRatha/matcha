@@ -23,11 +23,11 @@ int main(int argc, char* argv[]) {
   int errorFile = open("error.log", O_CREAT | O_RDWR | O_TRUNC, 0644);
   if (errorFile < 0) std::cerr << "Couldnt log errors in error.log file\n";
 
-  dup2(tradeFile, STDOUT_FILENO);
-  dup2(errorFile, STDERR_FILENO);
+  if (tradeFile >= 0) dup2(tradeFile, STDOUT_FILENO);
+  if (errorFile >= 0) dup2(errorFile, STDERR_FILENO);
 
   handleMsgs(argv[1], book);
 
-  close(tradeFile);
-  close(errorFile);
+  if (tradeFile >= 0) close(tradeFile);
+  if (errorFile >= 0) close(errorFile);
 }
